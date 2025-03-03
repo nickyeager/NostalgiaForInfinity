@@ -2,24 +2,35 @@
   "exchange": {
     "name": "okx",
     "pair_whitelist": [
-      "API3/USDT",
-      "ARB/USDT",
-      "BADGER/USDT",
-      "BNB/USDT",
-      "BTC/USDT",
-      "CFX/USDT",
+      "ALGO/USDT",
+      "ASTR/USDT",
+      "BNT/USDT",
+      "BONE/USDT",
       "CORE/USDT",
-      "GMX/USDT",
+      "HBAR/USDT",
+      "LAT/USDT",
+      "LINK/USDT",
+      "LPT/USDT",
       "OKB/USDT",
-      "ONE/USDT",
-      "PEOPLE/USDT",
-      "PHA/USDT",
-      "SIS/USDT",
       "SNX/USDT",
-      "WNCG/USDT",
       "XRP/USDT",
-      "YGG/USDT",
-      "ZBC/USDT"
+      "YGG/USDT"
+      // _
+      // __
+      // __ OLD pairs
+      // ___
+      // "API3/USDT",
+      // "ARB/USDT",
+      // "BADGER/USDT",
+      // "BNB/USDT",
+      // "BTC/USDT",
+      // "CFX/USDT",
+      // "CORE/USDT",
+      // "GMX/USDT",
+      // "ONE/USDT",
+      // "PEOPLE/USDT",
+      // "PHA/USDT",
+      // "SIS/USDT",
     ]
   },
   "pairlists": [{ "method": "StaticPairList" }]

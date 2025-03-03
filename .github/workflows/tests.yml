@@ -4,16 +4,16 @@ on: [push, pull_request]
 
 jobs:
   Pre-Commit:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Fetch Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 10
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
       - name: Install black
         run: |
           pip install black==23.7.0
@@ -43,7 +43,7 @@ jobs:
           extra_args: --files ${{ steps.changed-files.outputs.repo_files }}
 
   Binance-Backtests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs:
       - Pre-Commit
     strategy:
@@ -82,10 +82,23 @@ jobs:
           - 20230601-20230701
           - 20230701-20230801
           - 20230801-20230901
+          - 20230901-20231001
+          - 20231001-20231101
+          - 20231101-20231201
+          - 20231201-20240101
+          - 20240101-20240201
+          - 20240201-20240301
+          - 20240301-20240401
+          - 20240401-20240501
+          - 20240501-20240601
+          - 20240601-20240701
+          - 20240701-20240801
+          - 20240801-20240901
+          # - 20240901-20241001
 
     steps:
       - name: Fetch Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: "Create env file"
         run: |
@@ -109,8 +122,13 @@ jobs:
         run: |
           mkdir artifacts
           chmod 777 artifacts
+          chmod 777 ./user_data/backtest_results
+          chmod 777 ./user_data/logs
+          export COLUMNS=240
           docker build -f docker/Dockerfile.custom --no-cache -t ci-strategy-backtesting .
-          docker run -v ".:/testing" -v "./user_data/data:/testing/user_data/data" --rm \
+          docker run -v ".:/testing" -v "./user_data/data:/testing/user_data/data" \
+            -v "./user_data/logs:/testing/user_data/logs" -e "COLUMNS=240" \
+            -v "./user_data/backtest_results:/testing/user_data/backtest_results" --rm \
             -w /testing --entrypoint "" --env-file .github/workflows/scripts/ci-proxy.env \
             ci-strategy-backtesting \
             python -m pytest -ra -vv -s --log-cli-level=info --artifacts-path=artifacts/ \
@@ -125,13 +143,23 @@ jobs:
           cat artifacts/backtest-output-binance-spot-${{ matrix.timerange }}.txt
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: binance-testrun-artifacts
+          name: binance-testrun-artifacts-${{ matrix.timerange }}
           path: artifacts/
 
+  Merge-Binance:
+    runs-on: ubuntu-latest
+    needs: Binance-Backtests
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: binance-testrun-artifacts
+          pattern: binance-testrun-artifacts-*
+
   Kucoin-Backtests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs:
       - Pre-Commit
     strategy:
@@ -170,10 +198,23 @@ jobs:
           - 20230601-20230701
           - 20230701-20230801
           - 20230801-20230901
+          - 20230901-20231001
+          - 20231001-20231101
+          - 20231101-20231201
+          - 20231201-20240101
+          - 20240101-20240201
+          - 20240201-20240301
+          - 20240301-20240401
+          - 20240401-20240501
+          - 20240501-20240601
+          - 20240601-20240701
+          - 20240701-20240801
+          - 20240801-20240901
+          # - 20240901-20241001
 
     steps:
       - name: Fetch Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fetch data for backtests from https://github.com/DigiTuccar/HistoricalDataForTradeBacktest
         env:
@@ -191,9 +232,12 @@ jobs:
         run: |
           mkdir artifacts
           chmod 777 artifacts
+          chmod 777 ./user_data/backtest_results
+          chmod 777 ./user_data/logs
+          export COLUMNS=240
           docker build -f docker/Dockerfile.custom --no-cache -t ci-strategy-backtesting .
           docker run -v ".:/testing" -v "./user_data/data:/testing/user_data/data" --rm \
-            -w /testing --entrypoint "" --env-file .github/workflows/scripts/ci-proxy.env \
+            -w /testing --entrypoint "" -e "COLUMNS=240" --env-file .github/workflows/scripts/ci-proxy.env \
             ci-strategy-backtesting \
             python -m pytest -ra -vv -s --log-cli-level=info --artifacts-path=artifacts/ \
             -p no:cacheprovider tests/backtests -k 'kucoin and spot and ${{ matrix.timerange }}'
@@ -207,13 +251,23 @@ jobs:
           cat artifacts/backtest-output-kucoin-spot-${{ matrix.timerange }}.txt
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: kucoin-testrun-artifacts
+          name: kucoin-testrun-artifacts-${{ matrix.timerange }}
           path: artifacts/
 
+  Merge-Kucoin:
+    runs-on: ubuntu-latest
+    needs: Kucoin-Backtests
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: kucoin-testrun-artifacts
+          pattern: kucoin-testrun-artifacts-*
+
   # OKX-Backtests:
-  #   runs-on: ubuntu-20.04
+  #   runs-on: ubuntu-latest
   #   needs:
   #     - Pre-Commit
   #   strategy:
@@ -254,7 +308,7 @@ jobs:
 
   #   steps:
   #     - name: Fetch Source Code
-  #       uses: actions/checkout@v3
+  #       uses: actions/checkout@v4
 
   #     - name: Fetch data for backtests from https://github.com/DigiTuccar/HistoricalDataForTradeBacktest
   #       env:
@@ -288,25 +342,34 @@ jobs:
   #         cat artifacts/backtest-output-okx-spot-${{ matrix.timerange }}.txt
 
   #     - name: Upload Artifacts
-  #       uses: actions/upload-artifact@v3
+  #       uses: actions/upload-artifact@v4
   #       with:
-  #         name: okx-testrun-artifacts
+  #         name: okx-testrun-artifacts-${{ matrix.timerange }}
   #         path: artifacts/
+  #  Merge-Backtests:
+  #    runs-on: ubuntu-latest
+  #    needs: OKX-Backtests
+  #    steps:
+  #      - name: Merge Artifacts
+  #        uses: actions/upload-artifact/merge@v4
+  #        with:
+  #          name: okx-testrun-artifacts
+  #          pattern: okx-testrun-artifacts-*
 
   Backest-CI-Stats:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs:
       - Kucoin-Backtests
       - Binance-Backtests
       # - OKX-Backtests
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Install Dependencies
         run: |
@@ -346,34 +409,41 @@ jobs:
       #       --name=okx-testrun-artifacts downloaded-results
 
       - name: Download Current Binance CI Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: binance-testrun-artifacts
+          pattern:: binance-testrun-artifacts
           path: downloaded-results/current
 
       - name: Download Current Kucoin CI Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: kucoin-testrun-artifacts
+          pattern: kucoin-testrun-artifacts
           path: downloaded-results/current
 
       # - name: Download Current OKX CI Artifacts
-      #   uses: actions/download-artifact@v3
+      #   uses: actions/download-artifact@v4
       #   with:
-      #     name: okx-testrun-artifacts
+      #     pattern: okx-testrun-artifacts
       #     path: downloaded-results/current
 
       - name: Pre Format Backtest Results
         run: |
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/+/|/g' {} +
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/=//g' {} +
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/ BACKTESTING REPORT /\n## BACKTESTING REPORT\n/g' {} +
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/ LEFT OPEN TRADES REPORT /\n## LEFT OPEN TRADES REPORT\n/g' {} +
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/ ENTER TAG STATS /\n## ENTER TAG STATS\n/g' {} +
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/ EXIT REASON STATS /\n## EXIT REASON STATS\n/g' {} +
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/ SUMMARY METRICS /\n## SUMMARY METRICS\n/g' {} +
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/ STRATEGY SUMMARY /\n## STRATEGY SUMMARY\n/g' {} +
-          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/-|/:|/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/└.*┘//g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/┏.*┓//g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/┡/|/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/┃/|/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/╇/:|/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/━/-/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/│/|/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/┩/:|/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/BACKTESTING REPORT/\n## BACKTESTING REPORT\n/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/LEFT OPEN TRADES REPORT/\n## LEFT OPEN TRADES REPORT\n/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/ENTER TAG STATS/\n## ENTER TAG STATS\n/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/EXIT REASON STATS/\n## EXIT REASON STATS\n/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/MIXED TAG STATS/\n## MIXED TAG STATS\n/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/DAY BREAKDOWN/\n## DAY BREAKDOWN\n/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/SUMMARY METRICS/\n## SUMMARY METRICS\n/g' {} +
+          find downloaded-results/ -type f -iname *.txt -exec sed -i 's/STRATEGY SUMMARY/\n## STRATEGY SUMMARY\n/g' {} +
       - name: Show Environ
         run: |
           env
